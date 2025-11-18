@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ exam.title }}{% endblock %}
+
+{% block content %}
+<form method="post" action="{% url 'submit_exam' exam.id %}" id="examForm">
+    {% csrf_token %}
+
+    <div class="row">
+        <!-- Left: Passage Text -->
+        <div class="col-lg-6 col-12 mb-4 mb-lg-0">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <h5 class="m-0 fw-bold"><i class="fa-solid fa-align-left me-2"></i>Reading Passage</h5>
+                    <div class="badge bg-danger fs-6" id="timer">
+                        <i class="fa-regular fa-clock me-1"></i> <span id="timeRemaining">{{ exam.time_limit_minutes }}:00</span>
+                    </div>
+                </div>
+                <div class="passage-text">
+                    {{ exam.passage_text|linebreaks }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Questions -->
+        <div class="col-lg-6 col-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="m-0 fw-bold">Questions</h5>
+                    <small class="text-muted">Answered: <span id="answeredCount">0</span>/{{ exam.questions.count }}</small>
+                </div>
+                <div class="question-area">
+                    {% for question in exam.questions.all %}
+                    <div class="mb-4 p-3 border rounded bg-light question-block" data-question-id="{{ question.id }}">
+
+                        <!-- Заголовок вопроса с иконкой типа -->
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <p class="fw-bold mb-0 flex-grow-1">{{ forloop.counter }}. {{ question.text }}</p>
+                            {% if question.question_type == 'single_choice' %}
+                                <span class="badge bg-success ms-2">
+                                    <i class="fa-solid fa-circle-dot"></i> One Answer
+                                </span>
+                            {% elif question.question_type == 'multiple_choice' %}
+                                <span class="badge bg-primary ms-2">
+                                    <i class="fa-solid fa-check-double"></i> Multiple
+                                </span>
+                            {% elif question.question_type == 'matching' %}
+                                <span class="badge bg-warning ms-2">
+                                    <i class="fa-solid fa-link"></i> Match
+                                </span>
+                            {% elif question.question_type == 'fill_blank' %}
+                                <span class="badge bg-purple ms-2" style="background:#9C27B0;">
+                                    <i class="fa-solid fa-pen"></i> Fill
+                                </span>
+                            {% elif question.question_type == 'true_false_ng' %}
+                                <span class="badge bg-danger ms-2">
+                                    <i class="fa-solid fa-question"></i> T/F/NG
+                                </span>
+                            {% elif question.question_type == 'sentence_completion' %}
+                                <span class="badge bg-info ms-2">
+                                    <i class="fa-solid fa-text-width"></i> Complete
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Single Choice -->
+                        {% if question.question_type == 'single_choice' %}
+                            <div class="d-flex flex-column gap-2">
+                                {% for choice in question.choices.all %}
+                                <div class="form-check">
+                                    <input class="form-check-input answer-input" type="radio"
+                                           name="question_{{ question.id }}"
+                                           id="choice_{{ choice.id }}"
+                                           value="{{ choice.id }}">
+                                    <label class="form-check-label" for="choice_{{ choice.id }}">
+                                        {{ choice.text }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                        <!-- Multiple Choice -->
+                        {% elif question.question_type == 'multiple_choice' %}
+                            <small class="text-primary mb-2 d-block">
+                                <i class="fa-solid fa-info-circle"></i> Выберите все подходящие варианты
+                            </small>
+                            <div class="d-flex flex-column gap-2">
+                                {% for choice in question.choices.all %}
+                                <div class="form-check">
+                                    <input class="form-check-input answer-input" type="checkbox"
+                                           name="question_{{ question.id }}"
+                                           id="choice_{{ choice.id }}"
+                                           value="{{ choice.id }}">
+                                    <label class="form-check-label" for="choice_{{ choice.id }}">
+                                        {{ choice.text }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                        <!-- True/False/Not Given -->
+                        {% elif question.question_type == 'true_false_ng' %}
+                            <div class="d-flex flex-column gap-2">
+                                {% for choice in question.choices.all %}
+                                <div class="form-check">
+                                    <input class="form-check-input answer-input" type="radio"
+                                           name="question_{{ question.id }}"
+                                           id="choice_{{ choice.id }}"
+                                           value="{{ choice.id }}">
+                                    <label class="form-check-label" for="choice_{{ choice.id }}">
+                                        {{ choice.text }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                        <!-- Fill in the Blank -->
+                        {% elif question.question_type == 'fill_blank' %}
+                            <small class="text-muted mb-2 d-block">
+                                <i class="fa-solid fa-info-circle"></i> Введите 1-3 слова или число
+                            </small>
+                            <input type="text"
+                                   class="form-control answer-input"
+                                   name="question_{{ question.id }}"
+                                   placeholder="Ваш ответ..."
+                                   maxlength="100">
+
+                        <!-- Sentence Completion -->
+                        {% elif question.question_type == 'sentence_completion' %}
+                            <small class="text-muted mb-2 d-block">
+                                <i class="fa-solid fa-info-circle"></i> Завершите предложение
+                            </small>
+                            <input type="text"
+                                   class="form-control answer-input"
+                                   name="question_{{ question.id }}"
+                                   placeholder="Введите окончание предложения..."
+                                   maxlength="200">
+
+                        <!-- Matching -->
+                        {% elif question.question_type == 'matching' %}
+                            <small class="text-muted mb-2 d-block">
+                                <i class="fa-solid fa-info-circle"></i> Сопоставьте элементы
+                            </small>
+                            {% if question.matching_pairs %}
+                                {% for pair in question.matching_pairs %}
+                                <div class="row mb-2 align-items-center">
+                                    <div class="col-6">
+                                        <strong>{{ pair.left }}</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text"
+                                               class="form-control form-control-sm answer-input"
+                                               name="question_{{ question.id }}_match_{{ forloop.counter0 }}"
+                                               placeholder="Ответ...">
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endif %}
+
+                    </div>
+                    {% endfor %}
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Are you sure you want to submit?')">
+                            <i class="fa-solid fa-paper-plane me-2"></i>Submit Answers
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    // Timer
+    let timeLimit = {{ exam.time_limit_minutes }};
+    let timeLeft = timeLimit * 60;
+
+    const timerDisplay = document.getElementById('timeRemaining');
+    const timerBadge = document.getElementById('timer');
+
+    const timerInterval = setInterval(() => {
+        const minutes = Math.floor(timeLeft / 60);
+        let seconds = timeLeft % 60;
+        seconds = seconds < 10 ? '0' + seconds : seconds;
+
+        timerDisplay.textContent = `${minutes}:${seconds}`;
+
+        // Предупреждение когда осталось 2 минуты
+        if (timeLeft === 120) {
+            timerBadge.classList.remove('bg-danger');
+            timerBadge.classList.add('bg-warning', 'text-dark');
+            alert('⚠️ Осталось 2 минуты!');
+        }
+
+        // Последняя минута
+        if (timeLeft <= 60) {
+            timerBadge.classList.remove('bg-warning');
+            timerBadge.classList.add('bg-danger', 'animate-pulse');
+        }
+
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            alert("⏰ Время истекло! Отправляем ваш тест.");
+            document.getElementById('examForm').submit();
+        }
+
+        timeLeft--;
+    }, 1000);
+
+    // Подсчет отвеченных вопросов
+    function updateAnsweredCount() {
+        const questionBlocks = document.querySelectorAll('.question-block');
+        let answered = 0;
+
+        questionBlocks.forEach(block => {
+            const inputs = block.querySelectorAll('.answer-input');
+            let hasAnswer = false;
+
+            inputs.forEach(input => {
+                if (input.type === 'radio' || input.type === 'checkbox') {
+                    if (input.checked) hasAnswer = true;
+                } else if (input.type === 'text') {
+                    if (input.value.trim() !== '') hasAnswer = true;
+                }
+            });
+
+            if (hasAnswer) answered++;
+        });
+
+        document.getElementById('answeredCount').textContent = answered;
+    }
+
+    // Слушаем изменения
+    document.querySelectorAll('.answer-input').forEach(input => {
+        input.addEventListener('change', updateAnsweredCount);
+        input.addEventListener('input', updateAnsweredCount);
+    });
+
+    // Предупреждение при закрытии страницы
+    window.addEventListener('beforeunload', function (e) {
+        e.preventDefault();
+        e.returnValue = '';
+    });
+</script>
+
+<style>
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+.animate-pulse {
+    animation: pulse 1s infinite;
+}
+.passage-text {
+    height: 70vh;
+    overflow-y: auto;
+}
+.question-area {
+    height: 70vh;
+    overflow-y: auto;
+}
+</style>
+{% endblock %}

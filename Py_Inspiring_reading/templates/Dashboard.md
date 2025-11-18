@@ -1,0 +1,108 @@
+OLD VERSION OF DASHBOARD.MD 
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="row mb-5">
+    <div class="col-md-6">
+        <div class="card card-custom p-4 h-100" style="background: linear-gradient(135deg, #5bdf46 0%, #43a047 100%); color: white;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="display-4 fw-bold mb-0">{{ avg_score }}%</h1>
+                    <p class="fs-5 mb-0 opacity-75">Average Score</p>
+                </div>
+                <i class="fa-solid fa-chart-pie fs-1 opacity-50"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card card-custom p-4 h-100 bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="display-4 fw-bold mb-0 text-success">{{ total_taken }}</h1>
+                    <p class="fs-5 mb-0 text-muted">Tests Completed</p>
+                </div>
+                <div class="bg-light p-3 rounded-circle">
+                    <i class="fa-solid fa-check-circle fs-2 text-success"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Exams List -->
+<h4 class="fw-bold mb-4 text-dark">Reading Exams</h4>
+<div class="row mb-5">
+    {% for item in exam_data %}
+    <div class="col-md-4 mb-4">
+        <div class="card card-custom h-100 border-0">
+            <div class="card-body d-flex flex-column p-4">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="badge bg-light text-dark border">Reading</span>
+                    <span class="badge bg-success bg-opacity-10 text-success">
+                        <i class="fa-regular fa-clock me-1"></i> {{ item.exam.time_limit_minutes }} min
+                    </span>
+                </div>
+
+                <h5 class="card-title fw-bold mb-3">{{ item.exam.title }}</h5>
+                <p class="text-muted small mb-4">{{ item.exam.description|default:"Practice your reading skills with this unit test."|truncatechars:80 }}</p>
+
+                <div class="mt-auto">
+                    {% if item.is_taken %}
+                        <button class="btn btn-secondary w-100 py-2 rounded-3" disabled>
+                            Completed ({{ item.result.percentage|floatformat:0 }}%)
+                        </button>
+                    {% else %}
+                        <a href="{% url 'take_exam' item.exam.id %}" class="btn btn-salad w-100 py-2 rounded-3">
+                            Start Exam <i class="fa-solid fa-arrow-right ms-2"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5">
+        <img src="https://cdn-icons-png.flaticon.com/512/7486/7486744.png" width="100" class="mb-3 opacity-50">
+        <p class="text-muted">No exams available yet.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Recent Marks Section -->
+<h4 class="fw-bold mb-4 text-dark" id="marks">Your Marks</h4>
+<div class="card card-custom p-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="border-0 text-muted small text-uppercase ps-4">Exam</th>
+                    <th class="border-0 text-muted small text-uppercase">Date</th>
+                    <th class="border-0 text-muted small text-uppercase">Score</th>
+                    <th class="border-0 text-muted small text-uppercase">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results %}
+                <tr>
+                    <td class="ps-4 fw-bold">{{ result.exam.title }}</td>
+                    <td class="text-muted">{{ result.completed_at|date:"M d, Y" }}</td>
+                    <td>
+                        <span class="fw-bold text-dark">{{ result.score }}/{{ result.total_questions }}</span>
+                    </td>
+                    <td>
+                        {% if result.percentage >= 50 %}
+                            <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">Passed</span>
+                        {% else %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-pill">Failed</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center py-4 text-muted">No history available</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
